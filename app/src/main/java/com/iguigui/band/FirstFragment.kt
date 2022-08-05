@@ -11,6 +11,8 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.room.Room
+import com.iguigui.band.database.MyBandDatabase
 import com.inuker.bluetooth.library.BluetoothClient
 import com.inuker.bluetooth.library.Code.REQUEST_SUCCESS
 import com.inuker.bluetooth.library.Constants.STATUS_CONNECTED
@@ -100,10 +102,12 @@ class FirstFragment : Fragment() {
     @SuppressLint("SdCardPath")
     val database = openOrCreateDatabase("/data/data/com.iguigui.db/databases/my_band.db", null)
     {
-        it.execSQL("create table if not exists my_band( _id integer primary key autoincrement," +
+        it.execSQL("create table if not exists band( _id integer primary key autoincrement," +
                 "device_address VARCHAR(64)," +
                 "auth_key  VARCHAR(64))")
     }
+
+
 
 
     //数据存储

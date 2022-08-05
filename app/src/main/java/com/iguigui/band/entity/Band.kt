@@ -1,8 +1,12 @@
 package com.iguigui.band.entity
-//
-//@Entity
-//data class Band (
-//    @PrimaryKey val uid: Int,
-//    @ColumnInfo(name = "first_name") val firstName: String?,
-//    @ColumnInfo(name = "last_name") val lastName: String?
-//)
+
+import androidx.room.ColumnInfo
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity
+data class Band (
+    @PrimaryKey val _id: Int,
+    @ColumnInfo(name = "device_address") val deviceAddress: String,
+    @ColumnInfo(name = "auth_key") val authKey: String
+)
