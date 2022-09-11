@@ -9,6 +9,9 @@ android {
     compileSdkVersion 31
     buildToolsVersion "30.0.3"
 
+    buildFeatures {
+        dataBinding true
+    }
     defaultConfig {
         applicationId "com.iguigui.band"
         minSdkVersion 26
@@ -61,6 +64,5 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$rootProject.hiltVersion"
     implementation "androidx.profileinstaller:profileinstaller:$rootProject.profileInstallerVersion"
     implementation "androidx.tracing:tracing-ktx:$rootProject.tracingVersion"
-    implementation 'no.nordicsemi.android:ble:2.5.1'
-    implementation 'no.nordicsemi.android:ble-ktx:2.5.1'
+    implementation("cn.com.superLei:blelibrary:3.2.0")
 }
