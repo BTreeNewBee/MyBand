@@ -1,14 +1,13 @@
 package com.iguigui.band
 
 import android.Manifest
+import android.R.attr.data
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothGattCharacteristic
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
-import android.text.TextUtils
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -17,19 +16,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import cn.com.heaton.blelibrary.ble.Ble
 import cn.com.heaton.blelibrary.ble.BleLog
-import cn.com.heaton.blelibrary.ble.callback.BleScanCallback
-import cn.com.heaton.blelibrary.ble.callback.BleStatusCallback
+import cn.com.heaton.blelibrary.ble.callback.*
 import cn.com.heaton.blelibrary.ble.model.BleDevice
-import cn.com.heaton.blelibrary.ble.utils.Utils
-import cn.com.heaton.blelibrary.ble.utils.UuidUtils
+import cn.com.heaton.blelibrary.ble.utils.ByteUtils
 import java.util.*
+
 
 class MainActivity : AppCompatActivity() {
 
     private val REQUEST_CODE: Int = 0x01
 
     private lateinit var mBle: Ble<BleDevice>
-    private var listDatas = mutableListOf<BleDevice>()
+    private var devices = mutableMapOf<String, BleDevice>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,7 +37,58 @@ class MainActivity : AppCompatActivity() {
         initBLE()
         initBleStatus()
         findViewById<Button>(R.id.ConnectBand).setOnClickListener {
-            mBle.startScan(bleScanCallback())
+//            mBle.startScan(bleScanCallback())
+            devices["F0:71:B7:35:CD:3A"]?.let {
+                mBle.connect(it, object : BleConnectCallback<BleDevice>() {
+                    override fun onConnectionChanged(device: BleDevice?) {
+                        Log.println(Log.INFO, TAG, device.toString())
+                    }
+                })
+                mBle.enableNotify(it, true, object : BleNotifyCallback<BleDevice>() {
+                    override fun onChanged(
+                        device: BleDevice?,
+                        characteristic: BluetoothGattCharacteristic
+                    ) {
+                        val uuid = characteristic.uuid
+                        BleLog.e(TAG, "onChanged==uuid:$uuid")
+                        BleLog.e(
+                            TAG,
+                            "onChanged==data:" + ByteUtils.toHexString(characteristic.value)
+                        )
+                    }
+
+                    override fun onNotifySuccess(device: BleDevice?) {
+                        super.onNotifySuccess(device)
+                        BleLog.e(TAG, "onNotifySuccess: " + device?.bleName)
+                    }
+                })
+
+                mBle.read(it, object : BleReadCallback<BleDevice>() {
+                    @Override
+                    override fun onReadSuccess(
+                        dedvice: BleDevice,
+                        characteristic: BluetoothGattCharacteristic
+                    ) {
+                        super.onReadSuccess(dedvice, characteristic);
+                        BleLog.e(
+                            TAG,
+                            "onReadSuccess: " + dedvice.bleName + "  " + ByteUtils.toHexString(
+                                characteristic.value
+                            )
+                        );
+                    }
+                })
+                //写入一条数据
+                mBle.write(it, ByteArray(0), object : BleWriteCallback<BleDevice?>() {
+                    override fun onWriteSuccess(
+                        device: BleDevice?,
+                        characteristic: BluetoothGattCharacteristic
+                    ) {
+
+                    }
+                })
+            }
+
         }
     }
 
@@ -91,8 +140,9 @@ class MainActivity : AppCompatActivity() {
             connectFailedRetryCount = 3
             connectTimeout = 10000L
             scanPeriod = 12000L
-            uuidService = UUID.fromString(UuidUtils.uuid16To128("fd00"))
-            uuidWriteCha = UUID.fromString(UuidUtils.uuid16To128("fd01"))
+            uuidService = UUID.fromString("00001530-0000-3512-2118-0009af100700")
+            uuidWriteCha = UUID.fromString("00001531-0000-3512-2118-0009af100700")
+            uuidReadCha = UUID.fromString("00001532-0000-3512-2118-0009af100700")
             bleWrapperCallback = MyBleWrapperCallback()
             /*factory = object : BleFactory<MyDevice>() {
                 //实现自定义BleDevice时必须设置
@@ -152,6 +202,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun onStop() {
                 Log.println(Log.INFO, TAG, "onStop $this")
+
             }
 
             override fun onScanFailed(errorCode: Int) {
@@ -160,16 +211,9 @@ class MainActivity : AppCompatActivity() {
 
             override fun onLeScan(device: BleDevice?, rssi: Int, scanRecord: ByteArray?) {
                 Log.println(Log.INFO, "onLeScan", "device: $device scanRecord: $scanRecord")
-                if (TextUtils.isEmpty(device?.bleName)) {
-                    return
-                }
-                for (d in listDatas) {
-                    if (d.bleAddress == device?.bleAddress) {
-                        return
-                    }
-                }
                 device?.let {
-                    listDatas.add(it)
+                    devices.putIfAbsent(device.bleAddress, device)
+                    Log.println(Log.INFO, "onLeScan", "device: $device")
                 }
             }
         }

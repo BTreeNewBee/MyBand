@@ -22,7 +22,12 @@ class MyBleWrapperCallback : BleWrapperCallback<BleDevice>() {
 
     override fun onServicesDiscovered(device: BleDevice, gatt: BluetoothGatt) {
         super.onServicesDiscovered(device, gatt)
-        Log.d(TAG, "onServicesDiscovered: ")
+        gatt.services.forEach { bleService ->
+            bleService.characteristics.forEach {
+                Log.d(TAG,"onServicesDiscovered $bleService : $it")
+                Log.d(TAG,"onServicesDiscovered ${bleService.uuid} : ${it.uuid}")
+            }
+        }
     }
 
     override fun onWriteSuccess(device: BleDevice, characteristic: BluetoothGattCharacteristic) {
