@@ -5,7 +5,6 @@ import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattDescriptor
 import android.util.Log
 import cn.com.heaton.blelibrary.ble.callback.wrapper.BleWrapperCallback
-import cn.com.heaton.blelibrary.ble.model.BleDevice
 import cn.com.heaton.blelibrary.ble.utils.ByteUtils
 
 /**
@@ -14,28 +13,24 @@ import cn.com.heaton.blelibrary.ble.utils.ByteUtils
  * email: superliu0911@gmail.com
  * des: 例： OTA升级可以再这里实现,与项目其他功能逻辑完全解耦
  */
-class MyBleWrapperCallback : BleWrapperCallback<BleDevice>() {
-    override fun onChanged(device: BleDevice, characteristic: BluetoothGattCharacteristic) {
+class MyBleWrapperCallback : BleWrapperCallback<MyBandDevice>() {
+
+    override fun onChanged(device: MyBandDevice, characteristic: BluetoothGattCharacteristic) {
         super.onChanged(device, characteristic)
         Log.d(TAG, "onChanged: " + ByteUtils.toHexString(characteristic.value))
     }
 
-    override fun onServicesDiscovered(device: BleDevice, gatt: BluetoothGatt) {
+    override fun onServicesDiscovered(device: MyBandDevice, gatt: BluetoothGatt) {
         super.onServicesDiscovered(device, gatt)
-        gatt.services.forEach { bleService ->
-            bleService.characteristics.forEach {
-                Log.d(TAG,"onServicesDiscovered $bleService : $it")
-                Log.d(TAG,"onServicesDiscovered ${bleService.uuid} : ${it.uuid}")
-            }
-        }
+        device.registerService(gatt.services)
     }
 
-    override fun onWriteSuccess(device: BleDevice, characteristic: BluetoothGattCharacteristic) {
+    override fun onWriteSuccess(device: MyBandDevice, characteristic: BluetoothGattCharacteristic) {
         super.onWriteSuccess(device, characteristic)
         Log.d(TAG, "onWriteSuccess: ")
     }
 
-    override fun onConnectionChanged(device: BleDevice) {
+    override fun onConnectionChanged(device: MyBandDevice) {
         super.onConnectionChanged(device)
         Log.d(TAG, "onConnectionChanged: $device")
     }
@@ -45,47 +40,47 @@ class MyBleWrapperCallback : BleWrapperCallback<BleDevice>() {
         Log.d(TAG, "onStop: ")
     }
 
-    override fun onLeScan(device: BleDevice, rssi: Int, scanRecord: ByteArray) {
+    override fun onLeScan(device: MyBandDevice, rssi: Int, scanRecord: ByteArray) {
         super.onLeScan(device, rssi, scanRecord)
         Log.d(TAG, "onLeScan: $device")
     }
 
-    override fun onNotifySuccess(device: BleDevice) {
+    override fun onNotifySuccess(device: MyBandDevice) {
         super.onNotifySuccess(device)
         Log.d(TAG, "onNotifySuccess: ")
     }
 
-    override fun onNotifyCanceled(device: BleDevice) {
+    override fun onNotifyCanceled(device: MyBandDevice) {
         super.onNotifyCanceled(device)
         Log.d(TAG, "onNotifyCanceled: ")
     }
 
-    override fun onReady(device: BleDevice) {
+    override fun onReady(device: MyBandDevice) {
         super.onReady(device)
         Log.d(TAG, "onReady: ")
     }
 
-    override fun onDescWriteSuccess(device: BleDevice, descriptor: BluetoothGattDescriptor) {
+    override fun onDescWriteSuccess(device: MyBandDevice, descriptor: BluetoothGattDescriptor) {
         super.onDescWriteSuccess(device, descriptor)
     }
 
-    override fun onDescWriteFailed(device: BleDevice, failedCode: Int) {
+    override fun onDescWriteFailed(device: MyBandDevice, failedCode: Int) {
         super.onDescWriteFailed(device, failedCode)
     }
 
-    override fun onDescReadFailed(device: BleDevice, failedCode: Int) {
+    override fun onDescReadFailed(device: MyBandDevice, failedCode: Int) {
         super.onDescReadFailed(device, failedCode)
     }
 
-    override fun onDescReadSuccess(device: BleDevice, descriptor: BluetoothGattDescriptor) {
+    override fun onDescReadSuccess(device: MyBandDevice, descriptor: BluetoothGattDescriptor) {
         super.onDescReadSuccess(device, descriptor)
     }
 
-    override fun onMtuChanged(device: BleDevice, mtu: Int, status: Int) {
+    override fun onMtuChanged(device: MyBandDevice, mtu: Int, status: Int) {
         super.onMtuChanged(device, mtu, status)
     }
 
-    override fun onReadSuccess(device: BleDevice, characteristic: BluetoothGattCharacteristic) {
+    override fun onReadSuccess(device: MyBandDevice, characteristic: BluetoothGattCharacteristic) {
         super.onReadSuccess(device, characteristic)
     }
 
@@ -93,7 +88,7 @@ class MyBleWrapperCallback : BleWrapperCallback<BleDevice>() {
         private const val TAG = "MyBleWrapperCallback"
     }
 
-    override fun onNotifyFailed(device: BleDevice?, failedCode: Int) {
+    override fun onNotifyFailed(device: MyBandDevice?, failedCode: Int) {
         TODO("Not yet implemented")
     }
 }
