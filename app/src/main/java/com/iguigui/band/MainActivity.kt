@@ -17,7 +17,7 @@ import androidx.core.app.ActivityCompat
 import cn.com.heaton.blelibrary.ble.Ble
 import cn.com.heaton.blelibrary.ble.BleLog
 import cn.com.heaton.blelibrary.ble.callback.*
-import cn.com.heaton.blelibrary.ble.model.BleDevice
+import cn.com.heaton.blelibrary.ble.model.BleFactory
 import cn.com.heaton.blelibrary.ble.utils.ByteUtils
 import java.util.*
 
@@ -26,8 +26,8 @@ class MainActivity : AppCompatActivity() {
 
     private val REQUEST_CODE: Int = 0x01
 
-    private lateinit var mBle: Ble<BleDevice>
-    private var devices = mutableMapOf<String, BleDevice>()
+    private lateinit var mBle: Ble<MyBandDevice>
+    private var devices = mutableMapOf<String, MyBandDevice>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,14 +39,14 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.ConnectBand).setOnClickListener {
 //            mBle.startScan(bleScanCallback())
             devices["F0:71:B7:35:CD:3A"]?.let {
-                mBle.connect(it, object : BleConnectCallback<BleDevice>() {
-                    override fun onConnectionChanged(device: BleDevice?) {
+                mBle.connect(it, object : BleConnectCallback<MyBandDevice>() {
+                    override fun onConnectionChanged(device: MyBandDevice?) {
                         Log.println(Log.INFO, TAG, device.toString())
                     }
                 })
-                mBle.enableNotify(it, true, object : BleNotifyCallback<BleDevice>() {
+                mBle.enableNotify(it, true, object : BleNotifyCallback<MyBandDevice>() {
                     override fun onChanged(
-                        device: BleDevice?,
+                        device: MyBandDevice?,
                         characteristic: BluetoothGattCharacteristic
                     ) {
                         val uuid = characteristic.uuid
@@ -57,16 +57,16 @@ class MainActivity : AppCompatActivity() {
                         )
                     }
 
-                    override fun onNotifySuccess(device: BleDevice?) {
+                    override fun onNotifySuccess(device: MyBandDevice?) {
                         super.onNotifySuccess(device)
                         BleLog.e(TAG, "onNotifySuccess: " + device?.bleName)
                     }
                 })
 
-                mBle.read(it, object : BleReadCallback<BleDevice>() {
+                mBle.read(it, object : BleReadCallback<MyBandDevice>() {
                     @Override
                     override fun onReadSuccess(
-                        dedvice: BleDevice,
+                        dedvice: MyBandDevice,
                         characteristic: BluetoothGattCharacteristic
                     ) {
                         super.onReadSuccess(dedvice, characteristic);
@@ -79,9 +79,9 @@ class MainActivity : AppCompatActivity() {
                     }
                 })
                 //写入一条数据
-                mBle.write(it, ByteArray(0), object : BleWriteCallback<BleDevice?>() {
+                mBle.write(it, ByteArray(0), object : BleWriteCallback<MyBandDevice?>() {
                     override fun onWriteSuccess(
-                        device: BleDevice?,
+                        device: MyBandDevice?,
                         characteristic: BluetoothGattCharacteristic
                     ) {
 
@@ -144,12 +144,12 @@ class MainActivity : AppCompatActivity() {
             uuidWriteCha = UUID.fromString("00001531-0000-3512-2118-0009af100700")
             uuidReadCha = UUID.fromString("00001532-0000-3512-2118-0009af100700")
             bleWrapperCallback = MyBleWrapperCallback()
-            /*factory = object : BleFactory<MyDevice>() {
-                //实现自定义BleDevice时必须设置
-                override fun create(address: String, name: String): MyDevice{
-                    return MyDevice(address, name) //自定义BleDevice的子类
+            factory = object : BleFactory<MyBandDevice>() {
+                //实现自定义MyBandDevice时必须设置
+                override fun create(address: String, name: String?): MyBandDevice{
+                    return MyBandDevice(address, name) //自定义MyBandDevice的子类
                 }
-            }*/
+            }
         }.create(applicationContext, object : Ble.InitCallback {
             override fun failed(failedCode: Int) {
                 BleLog.i(TAG, "init failed: $failedCode")
@@ -194,8 +194,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun bleScanCallback(): BleScanCallback<BleDevice> {
-        return object : BleScanCallback<BleDevice>() {
+    private fun bleScanCallback(): BleScanCallback<MyBandDevice> {
+        return object : BleScanCallback<MyBandDevice>() {
             override fun onStart() {
                 Log.println(Log.INFO, TAG, "onStart $this")
             }
@@ -209,7 +209,7 @@ class MainActivity : AppCompatActivity() {
                 Log.println(Log.INFO, TAG, "onScanFailed $this")
             }
 
-            override fun onLeScan(device: BleDevice?, rssi: Int, scanRecord: ByteArray?) {
+            override fun onLeScan(device: MyBandDevice?, rssi: Int, scanRecord: ByteArray?) {
                 Log.println(Log.INFO, "onLeScan", "device: $device scanRecord: $scanRecord")
                 device?.let {
                     devices.putIfAbsent(device.bleAddress, device)

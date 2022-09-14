@@ -6,7 +6,7 @@ import cn.com.heaton.blelibrary.ble.model.BleDevice
 
 class MyBandDevice : BleDevice {
 
-    constructor(address: String, name: String) : super(address, name)
+    constructor(address: String, name: String?) : super(address, name)
 
     constructor(parcel: Parcel) : super(parcel)
 
