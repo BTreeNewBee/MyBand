@@ -39,54 +39,12 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.ConnectBand).setOnClickListener {
 //            mBle.startScan(bleScanCallback())
             devices["F0:71:B7:35:CD:3A"]?.let {
-                mBle.connect(it, object : BleConnectCallback<MyBandDevice>() {
-                    override fun onConnectionChanged(device: MyBandDevice?) {
-                        Log.println(Log.INFO, TAG, device.toString())
-                    }
-                })
-                mBle.enableNotify(it, true, object : BleNotifyCallback<MyBandDevice>() {
-                    override fun onChanged(
-                        device: MyBandDevice?,
-                        characteristic: BluetoothGattCharacteristic
-                    ) {
-                        val uuid = characteristic.uuid
-                        BleLog.e(TAG, "onChanged==uuid:$uuid")
-                        BleLog.e(
-                            TAG,
-                            "onChanged==data:" + ByteUtils.toHexString(characteristic.value)
-                        )
-                    }
-
-                    override fun onNotifySuccess(device: MyBandDevice?) {
-                        super.onNotifySuccess(device)
-                        BleLog.e(TAG, "onNotifySuccess: " + device?.bleName)
-                    }
-                })
-
-                mBle.read(it, object : BleReadCallback<MyBandDevice>() {
-                    @Override
-                    override fun onReadSuccess(
-                        dedvice: MyBandDevice,
-                        characteristic: BluetoothGattCharacteristic
-                    ) {
-                        super.onReadSuccess(dedvice, characteristic);
-                        BleLog.e(
-                            TAG,
-                            "onReadSuccess: " + dedvice.bleName + "  " + ByteUtils.toHexString(
-                                characteristic.value
-                            )
-                        );
-                    }
-                })
-                //写入一条数据
-                mBle.write(it, ByteArray(0), object : BleWriteCallback<MyBandDevice?>() {
-                    override fun onWriteSuccess(
-                        device: MyBandDevice?,
-                        characteristic: BluetoothGattCharacteristic
-                    ) {
-
-                    }
-                })
+                it.mBle = mBle
+                it.connect()
+//                it.registerNotify()
+//                it.auth()
+//                it.read()
+//                it.write()
             }
 
         }
@@ -147,6 +105,7 @@ class MainActivity : AppCompatActivity() {
             factory = object : BleFactory<MyBandDevice>() {
                 //实现自定义MyBandDevice时必须设置
                 override fun create(address: String, name: String?): MyBandDevice{
+                    Log.d("BleLog", "BleLogcreate: $address")
                     return MyBandDevice(address, name) //自定义MyBandDevice的子类
                 }
             }
