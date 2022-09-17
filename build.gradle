@@ -2,6 +2,8 @@
 
 buildscript {
     // Define versions in a single place
+    ext.kotlin_version = '1.6.21'
+    apply from: 'dependency.gradle'
     ext {
         // Sdk and tools
         compileSdkVersion = 31
