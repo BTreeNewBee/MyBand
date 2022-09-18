@@ -35,17 +35,25 @@ class MainActivity : AppCompatActivity() {
         setSupportActionBar(findViewById(R.id.toolbar))
         requestBLEPermission()
         initBLE()
-        initBleStatus()
+//        initBleStatus()
         findViewById<Button>(R.id.ConnectBand).setOnClickListener {
+
 //            mBle.startScan(bleScanCallback())
-            devices["F0:71:B7:35:CD:3A"]?.let {
-                it.mBle = mBle
-                it.connect()
-//                it.registerNotify()
-//                it.auth()
-//                it.read()
-//                it.write()
+            val myBandDevice = devices["F0:71:B7:35:CD:3A"]
+            if (myBandDevice == null) {
+                if (mBle.isScanning) {
+                    mBle.stopScan()
+                }
+                mBle.startScan(bleScanCallback())
+                return@setOnClickListener
             }
+            if (myBandDevice.isConnected) {
+                myBandDevice.auth()
+                return@setOnClickListener
+            }
+
+            myBandDevice.mBle = mBle
+            myBandDevice.connect()
 
         }
     }

@@ -85,40 +85,41 @@ class MyBandDevice : BleDevice {
         immediateAlert = serviceMap["00001802-0000-1000-8000-00805f9b34fb"]!!
         humanInterfaceDevice = serviceMap["00001812-0000-1000-8000-00805f9b34fb"]!!
         unknown = serviceMap["00003802-0000-1000-8000-00805f9b34fb"]!!
+        Log.d("MyBandDevice", "registerService successes: $service")
 
     }
 
     fun auth() {
 
         //Find auth characteristic
-        val characteristic = notify.includedServices.find {
+        val characteristic = notify.characteristics.find {
             it.uuid.toString().lowercase() == "00000009-0000-3512-2118-0009af100700"
         }
 
         if (characteristic != null) {
-            mBle.enableNotifyByUuid(
-                this,
-                true,
-                notify.uuid,
-                characteristic.uuid,
-                object : BleNotifyCallback<MyBandDevice>() {
-                    override fun onChanged(
-                        device: MyBandDevice?,
-                        characteristic: BluetoothGattCharacteristic
-                    ) {
-                        val uuid = characteristic.uuid
-                        BleLog.e(ContentValues.TAG, "onChanged==uuid:$uuid")
-                        BleLog.e(
-                            ContentValues.TAG,
-                            "onChanged==data:" + ByteUtils.toHexString(characteristic.value)
-                        )
-                    }
-
-                    override fun onNotifySuccess(device: MyBandDevice?) {
-                        super.onNotifySuccess(device)
-                        BleLog.e(ContentValues.TAG, "onNotifySuccess: " + device?.bleName)
-                    }
-                })
+//            mBle.enableNotifyByUuid(
+//                this,
+//                true,
+//                notify.uuid,
+//                characteristic.uuid,
+//                object : BleNotifyCallback<MyBandDevice>() {
+//                    override fun onChanged(
+//                        device: MyBandDevice?,
+//                        characteristic: BluetoothGattCharacteristic
+//                    ) {
+//                        val uuid = characteristic.uuid
+//                        BleLog.e(ContentValues.TAG, "onChanged==uuid:$uuid")
+//                        BleLog.e(
+//                            ContentValues.TAG,
+//                            "onChanged==data:" + ByteUtils.toHexString(characteristic.value)
+//                        )
+//                    }
+//
+//                    override fun onNotifySuccess(device: MyBandDevice?) {
+//                        super.onNotifySuccess(device)
+//                        BleLog.e(ContentValues.TAG, "onNotifySuccess: " + device?.bleName)
+//                    }
+//                })
 
             mBle.readByUuid(
                 this,
@@ -130,9 +131,32 @@ class MyBandDevice : BleDevice {
                         data: ByteArray?,
                         uuid: String?
                     ) {
-                        Log.d("MyBandDevice", "onReadSuccess: $data")
+                        BleLog.e(ContentValues.TAG, "onReadSuccess: " + device?.bleName)
+                        data?.let {
+                            BleLog.e(
+                                ContentValues.TAG,
+                                "onReadSuccess==data:" + ByteUtils.bytes2HexStr(it)
+                            )
+                        }
+                    }
+
+                    override fun onReadFailed(device: MyBandDevice?, failedCode: Int) {
+                        BleLog.e(ContentValues.TAG, "onReadFailed: ${device?.bleName} $failedCode ")
                     }
                 })
+            mBle.writeByUuid(this, byteArrayOf(0x02, 0x00), notify.uuid, characteristic.uuid, object :
+                BleWriteCallback<MyBandDevice>() {
+                override fun onWriteSuccess(
+                    device: MyBandDevice?,
+                    characteristic: BluetoothGattCharacteristic?
+                ) {
+                    BleLog.e(ContentValues.TAG, "onWriteSuccess: " + device?.bleName)
+                }
+
+                override fun onWriteFailed(device: MyBandDevice?, failedCode: Int) {
+                    BleLog.e(ContentValues.TAG, "onWriteFailed: " + device?.bleName + " failedCode:" + failedCode)
+                }
+            })
         }
     }
 
@@ -145,9 +169,6 @@ class MyBandDevice : BleDevice {
         })
     }
 
-    fun registerNotify() {
-
-    }
 
     fun read() {
         mBle.read(this, object : BleReadCallback<MyBandDevice>() {

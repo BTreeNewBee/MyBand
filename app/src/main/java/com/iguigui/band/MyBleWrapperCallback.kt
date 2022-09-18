@@ -23,7 +23,6 @@ class MyBleWrapperCallback : BleWrapperCallback<MyBandDevice>() {
     override fun onServicesDiscovered(device: MyBandDevice, gatt: BluetoothGatt) {
         super.onServicesDiscovered(device, gatt)
         device.registerService(gatt.services)
-        device.auth()
     }
 
     override fun onWriteSuccess(device: MyBandDevice, characteristic: BluetoothGattCharacteristic) {
