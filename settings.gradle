@@ -1,2 +1,2 @@
-include ':app', ':miband-sdk-kotlin'
+include ':app'
 rootProject.name = "My Band"
