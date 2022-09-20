@@ -65,4 +65,5 @@ dependencies {
     implementation "androidx.profileinstaller:profileinstaller:$rootProject.profileInstallerVersion"
     implementation "androidx.tracing:tracing-ktx:$rootProject.tracingVersion"
     implementation("cn.com.superLei:blelibrary:3.2.0")
+    implementation ('com.inuker.bluetooth:library:1.4.0')
 }

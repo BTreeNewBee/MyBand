@@ -1,4 +1,4 @@
-package com.iguigui.band
+package com.iguigui.band.blelibrary
 
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCharacteristic

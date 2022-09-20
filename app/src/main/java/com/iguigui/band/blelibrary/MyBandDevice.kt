@@ -1,4 +1,4 @@
-package com.iguigui.band
+package com.iguigui.band.blelibrary
 
 import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothGattService
@@ -8,7 +8,6 @@ import android.util.Log
 import cn.com.heaton.blelibrary.ble.Ble
 import cn.com.heaton.blelibrary.ble.BleLog
 import cn.com.heaton.blelibrary.ble.callback.BleConnectCallback
-import cn.com.heaton.blelibrary.ble.callback.BleNotifyCallback
 import cn.com.heaton.blelibrary.ble.callback.BleReadCallback
 import cn.com.heaton.blelibrary.ble.callback.BleWriteCallback
 import cn.com.heaton.blelibrary.ble.model.BleDevice

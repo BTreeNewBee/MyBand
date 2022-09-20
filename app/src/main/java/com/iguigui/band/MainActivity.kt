@@ -1,12 +1,6 @@
 package com.iguigui.band
 
 import android.Manifest
-import android.R.attr.data
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothGattCharacteristic
-import android.content.ContentValues.TAG
-import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
@@ -14,11 +8,14 @@ import android.view.MenuItem
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import cn.com.heaton.blelibrary.ble.Ble
-import cn.com.heaton.blelibrary.ble.BleLog
-import cn.com.heaton.blelibrary.ble.callback.*
-import cn.com.heaton.blelibrary.ble.model.BleFactory
 import cn.com.heaton.blelibrary.ble.utils.ByteUtils
+import com.inuker.bluetooth.library.BluetoothClient
+import com.inuker.bluetooth.library.Code.REQUEST_SUCCESS
+import com.inuker.bluetooth.library.Constants.STATUS_CONNECTED
+import com.inuker.bluetooth.library.Constants.STATUS_DISCONNECTED
+import com.inuker.bluetooth.library.connect.listener.BleConnectStatusListener
+import com.inuker.bluetooth.library.connect.options.BleConnectOptions
+import com.inuker.bluetooth.library.connect.response.BleNotifyResponse
 import java.util.*
 
 
@@ -26,47 +23,208 @@ class MainActivity : AppCompatActivity() {
 
     private val REQUEST_CODE: Int = 0x01
 
-    private lateinit var mBle: Ble<MyBandDevice>
-    private var devices = mutableMapOf<String, MyBandDevice>()
+
+    private val MAC = "F0:71:B7:35:CD:3A"
+
+    lateinit var mClient: BluetoothClient
+
+    var notifyService = UUID.fromString("0000fee1-0000-1000-8000-00805f9b34fb")
+
+    var auth = UUID.fromString("00000009-0000-3512-2118-0009af100700")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
         requestBLEPermission()
-        initBLE()
 //        initBleStatus()
         findViewById<Button>(R.id.ConnectBand).setOnClickListener {
+            mClient = BluetoothClient(this)
+//            val request = SearchRequest.Builder()
+//                .searchBluetoothLeDevice(3000, 3) // 先扫BLE设备3次，每次3s
+//                .build()
+//            mClient.search(request, object : SearchResponse {
+//                override fun onSearchStarted() {
+//                    Log.d("onSearchStarted", "onSearchStarted")
+//                }
+//                override fun onDeviceFounded(device: SearchResult) {
+//                    if (device.address.toString() == MAC) {
+//                        Log.d("onDeviceFounded", "onDeviceFounded ${device.address}" )
+//                        val beacon = Beacon(device.scanRecord)
+//                        BluetoothLog.v(
+//                            String.format(
+//                                "beacon for %s\n%s",
+//                                device.getAddress(),
+//                                beacon.toString()
+//                            )
+//                        )
+//                    }
+//                }
+//                override fun onSearchStopped() {
+//                    Log.d("MainActivity", "onSearchStopped")
+//                }
+//                override fun onSearchCanceled() {
+//                    Log.d("MainActivity", "onSearchCanceled")
+//                }
+//            })
+            val options = BleConnectOptions.Builder()
+                .setConnectRetry(3) // 连接如果失败重试3次
+                .setConnectTimeout(30000) // 连接超时30s
+                .setServiceDiscoverRetry(3) // 发现服务如果失败重试3次
+                .setServiceDiscoverTimeout(20000) // 发现服务超时20s
+                .build()
 
-//            mBle.startScan(bleScanCallback())
-            val myBandDevice = devices["F0:71:B7:35:CD:3A"]
-            if (myBandDevice == null) {
-                if (mBle.isScanning) {
-                    mBle.stopScan()
+            mClient.connect(
+                MAC, options
+            ) { code, data ->
+                if (code == REQUEST_SUCCESS) {
+                    Log.d("MainActivity", "connect success data: ${data.services}")
+                    data.services
+                } else {
+                    Log.d("MainActivity", "connect failed code: $code")
                 }
-                mBle.startScan(bleScanCallback())
-                return@setOnClickListener
-            }
-            if (myBandDevice.isConnected) {
-                myBandDevice.auth()
-                return@setOnClickListener
             }
 
-            myBandDevice.mBle = mBle
-            myBandDevice.connect()
+
+//            mClient.read(
+//                MAC, notifyService, auth
+//            ) { code, data ->
+//                if (code == REQUEST_SUCCESS) {
+//                    Log.d("MainActivity", "read success data: ${ByteUtils.bytes2HexStr(data)}")
+//                } else {
+//                    Log.d("MainActivity", "read failed code: $code")
+//                }
+//            }
+
+
+            mClient.notify(MAC, notifyService, auth, object : BleNotifyResponse {
+                override fun onNotify(service: UUID?, character: UUID?, value: ByteArray?) {
+
+                    Log.d("MainActivity", "onNotify: ${ByteUtils.bytes2HexStr(value)}")
+
+                    value?.let {
+                        val bytes2HexStr = ByteUtils.bytes2HexStr(it.sliceArray(0 .. 2))
+                        when (bytes2HexStr) {
+                            "100101" -> {
+                                Log.d("MainActivity", "Start to request random number...")
+                                requestRandomNumber()
+                            }
+                            "100104" -> {
+                                Log.d("MainActivity", "Failed to send key.")
+                            }
+                            "100201" -> {
+                                Log.d("MainActivity", "Start to send encrypt random number...")
+                                sendEncryptRandomNumber(it.sliceArray(3 until it.size))
+                            }
+                            "100204" -> {
+                                Log.d("MainActivity", "Failed to request random number.")
+                            }
+                            "100301" -> {
+                                Log.d("MainActivity", "Mi Band Connect Success!")
+                            }
+                            "100304" -> {
+                                Log.d(
+                                    "MainActivity",
+                                    "Encryption key auth fail, sending new key..."
+                                )
+//                                sendKey()
+                            }
+                            else -> {
+                                Log.d("MainActivity", "Unknown response.")
+                            }
+                        }
+                    }
+
+                }
+
+                override fun onResponse(code: Int) {
+                    if (code == REQUEST_SUCCESS) {
+                        Log.d("MainActivity", "notify success")
+                    } else {
+                        Log.d("MainActivity", "notify failed code: $code")
+                    }
+                }
+            })
+
+            mClient.registerConnectStatusListener(MAC, mBleConnectStatusListener)
+
 
         }
     }
 
-    private fun initBleStatus() {
-        mBle.setBleStatusCallback { isOn ->
-            BleLog.i(TAG, "onBluetoothStatusOn: 蓝牙是否打开>>>>:$isOn")
-            if (mBle.isScanning) {
-                mBle.stopScan()
+    private fun sendEncryptRandomNumber(sliceArray: ByteArray) {
+        val encryptRandomNumber = ByteUtils.bytes2HexStr(sliceArray)
+        Log.d("MainActivity", "encryptRandomNumber: $encryptRandomNumber")
+        val bytes = byteArrayOf(0x03, 0x00) + AESCrypt.encrypt(
+            sliceArray,
+            "f969db5c1efb6b2021f0a3c6e03efd9d".toByteArray()
+        )
+        Log.d("MainActivity", "bytes size = ${bytes.size} : ${ByteUtils.bytes2HexStr(bytes)}")
+        bytes.sliceArray(0 until 20).let {
+            Log.d("MainActivity", "bytes size = ${it.size} : ${ByteUtils.bytes2HexStr(it)}")
+            mClient.write(
+                MAC, notifyService, auth, it
+            ) { code ->
+                if (code == REQUEST_SUCCESS) {
+                    Log.d("MainActivity", "sendEncryptRandomNumber write success")
+                    bytes.sliceArray(20 until 40).let {
+                        Log.d("MainActivity", "bytes size = ${it.size} : ${ByteUtils.bytes2HexStr(it)}")
+                        mClient.write(
+                            MAC, notifyService, auth, it
+                        ) { code ->
+                            if (code == REQUEST_SUCCESS) {
+                                Log.d("MainActivity", "sendEncryptRandomNumber write success")
+                                bytes.sliceArray(40 until bytes.size).let {
+                                    Log.d("MainActivity", "bytes size = ${it.size} : ${ByteUtils.bytes2HexStr(it)}")
+                                    mClient.write(
+                                        MAC, notifyService, auth, it
+                                    ) { code ->
+                                        if (code == REQUEST_SUCCESS) {
+                                            Log.d("MainActivity", "sendEncryptRandomNumber write success")
+                                        } else {
+                                            Log.d("MainActivity", "sendEncryptRandomNumber write failed code: $code")
+                                        }
+                                    }
+                                }
+                            } else {
+                                Log.d("MainActivity", "sendEncryptRandomNumber write failed code: $code")
+                            }
+                        }
+                    }
+                } else {
+                    Log.d("MainActivity", "sendEncryptRandomNumber write failed code: $code")
+                }
+            }
+        }
+
+
+    }
+
+    private fun requestRandomNumber() {
+        mClient.write(
+            MAC, notifyService, auth, byteArrayOf(0x02, 0x00)
+        ) { code ->
+            if (code == REQUEST_SUCCESS) {
+                Log.d("MainActivity", "requestRandomNumber write success")
+            } else {
+                Log.d("MainActivity", "requestRandomNumber write failed code: $code")
             }
         }
     }
 
+
+
+    private val mBleConnectStatusListener: BleConnectStatusListener =
+        object : BleConnectStatusListener() {
+            override fun onConnectStatusChanged(mac: String, status: Int) {
+                if (status == STATUS_CONNECTED) {
+                    Log.d("MainActivity", "onConnectStatusChanged: connected")
+                    requestRandomNumber()
+                } else if (status == STATUS_DISCONNECTED) {
+                    Log.d("MainActivity", "onConnectStatusChanged: disconnected")
+                }
+            }
+        }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -94,89 +252,5 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-
-    //初始化蓝牙
-    private fun initBLE() {
-
-        mBle = Ble.options().apply {
-            logBleEnable = true
-            throwBleException = true
-            autoConnect = true
-            logTAG = "BleLog"
-            connectFailedRetryCount = 3
-            connectTimeout = 10000L
-            scanPeriod = 12000L
-            uuidService = UUID.fromString("00001530-0000-3512-2118-0009af100700")
-            uuidWriteCha = UUID.fromString("00001531-0000-3512-2118-0009af100700")
-            uuidReadCha = UUID.fromString("00001532-0000-3512-2118-0009af100700")
-            bleWrapperCallback = MyBleWrapperCallback()
-            factory = object : BleFactory<MyBandDevice>() {
-                //实现自定义MyBandDevice时必须设置
-                override fun create(address: String, name: String?): MyBandDevice{
-                    Log.d("BleLog", "BleLogcreate: $address")
-                    return MyBandDevice(address, name) //自定义MyBandDevice的子类
-                }
-            }
-        }.create(applicationContext, object : Ble.InitCallback {
-            override fun failed(failedCode: Int) {
-                BleLog.i(TAG, "init failed: $failedCode")
-            }
-
-            override fun success() {
-                BleLog.i(TAG, "init success")
-            }
-
-        })
-        //3、检查蓝牙是否支持及打开
-        checkBluetoothStatus()
-    }
-
-
-    //检查蓝牙是否支持及打开
-    private fun checkBluetoothStatus() {
-        // 检查设备是否支持BLE4.0
-        if (!mBle.isSupportBle(this)) {
-            finish()
-        }
-        if (!mBle.isBleEnable) {
-            //4、若未打开，则请求打开蓝牙
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            if (ActivityCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.BLUETOOTH_CONNECT
-                ) != PackageManager.PERMISSION_GRANTED
-            ) {
-                return
-            }
-        } else {
-            //5、若已打开，则进行扫描
-            mBle.startScan(bleScanCallback())
-        }
-    }
-
-    private fun bleScanCallback(): BleScanCallback<MyBandDevice> {
-        return object : BleScanCallback<MyBandDevice>() {
-            override fun onStart() {
-                Log.println(Log.INFO, TAG, "onStart $this")
-            }
-
-            override fun onStop() {
-                Log.println(Log.INFO, TAG, "onStop $this")
-
-            }
-
-            override fun onScanFailed(errorCode: Int) {
-                Log.println(Log.INFO, TAG, "onScanFailed $this")
-            }
-
-            override fun onLeScan(device: MyBandDevice?, rssi: Int, scanRecord: ByteArray?) {
-                Log.println(Log.INFO, "onLeScan", "device: $device scanRecord: $scanRecord")
-                device?.let {
-                    devices.putIfAbsent(device.bleAddress, device)
-                    Log.println(Log.INFO, "onLeScan", "device: $device")
-                }
-            }
-        }
-    }
 
 }
