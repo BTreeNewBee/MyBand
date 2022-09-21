@@ -103,7 +103,7 @@ class MainActivity : AppCompatActivity() {
                     Log.d("MainActivity", "onNotify: ${ByteUtils.bytes2HexStr(value)}")
 
                     value?.let {
-                        val bytes2HexStr = ByteUtils.bytes2HexStr(it.sliceArray(0 .. 2))
+                        val bytes2HexStr = ByteUtils.bytes2HexStr(it.sliceArray(0..2))
                         when (bytes2HexStr) {
                             "100101" -> {
                                 Log.d("MainActivity", "Start to request random number...")
@@ -152,51 +152,35 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+
+    private fun hexStrToByteArray(str: String): ByteArray {
+        if (str.isEmpty()) {
+            return ByteArray(0)
+        }
+        val byteArray = ByteArray(str.length / 2)
+        for (i in byteArray.indices) {
+            val subStr = str.substring(2 * i, 2 * i + 2)
+            byteArray[i] = subStr.toInt(16).toByte()
+        }
+        return byteArray
+    }
+
     private fun sendEncryptRandomNumber(sliceArray: ByteArray) {
-        val encryptRandomNumber = ByteUtils.bytes2HexStr(sliceArray)
-        Log.d("MainActivity", "encryptRandomNumber: $encryptRandomNumber")
+        val key = "f969db5c1efb6b2021f0a3c6e03efd9d"
         val bytes = byteArrayOf(0x03, 0x00) + AESCrypt.encrypt(
             sliceArray,
-            "f969db5c1efb6b2021f0a3c6e03efd9d".toByteArray()
+            hexStrToByteArray(key)
         )
-        Log.d("MainActivity", "bytes size = ${bytes.size} : ${ByteUtils.bytes2HexStr(bytes)}")
-        bytes.sliceArray(0 until 20).let {
-            Log.d("MainActivity", "bytes size = ${it.size} : ${ByteUtils.bytes2HexStr(it)}")
-            mClient.write(
-                MAC, notifyService, auth, it
-            ) { code ->
-                if (code == REQUEST_SUCCESS) {
-                    Log.d("MainActivity", "sendEncryptRandomNumber write success")
-                    bytes.sliceArray(20 until 40).let {
-                        Log.d("MainActivity", "bytes size = ${it.size} : ${ByteUtils.bytes2HexStr(it)}")
-                        mClient.write(
-                            MAC, notifyService, auth, it
-                        ) { code ->
-                            if (code == REQUEST_SUCCESS) {
-                                Log.d("MainActivity", "sendEncryptRandomNumber write success")
-                                bytes.sliceArray(40 until bytes.size).let {
-                                    Log.d("MainActivity", "bytes size = ${it.size} : ${ByteUtils.bytes2HexStr(it)}")
-                                    mClient.write(
-                                        MAC, notifyService, auth, it
-                                    ) { code ->
-                                        if (code == REQUEST_SUCCESS) {
-                                            Log.d("MainActivity", "sendEncryptRandomNumber write success")
-                                        } else {
-                                            Log.d("MainActivity", "sendEncryptRandomNumber write failed code: $code")
-                                        }
-                                    }
-                                }
-                            } else {
-                                Log.d("MainActivity", "sendEncryptRandomNumber write failed code: $code")
-                            }
-                        }
-                    }
-                } else {
-                    Log.d("MainActivity", "sendEncryptRandomNumber write failed code: $code")
-                }
+        mClient.write(
+            MAC, notifyService, auth, bytes
+        ) { code ->
+            if (code == REQUEST_SUCCESS) {
+                Log.d("MainActivity", "sendEncryptRandomNumber write success")
+            } else {
+                Log.d("MainActivity", "sendEncryptRandomNumber write failed code: $code")
             }
         }
-
 
     }
 
@@ -211,7 +195,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
 
 
     private val mBleConnectStatusListener: BleConnectStatusListener =
