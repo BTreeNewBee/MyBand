@@ -28,9 +28,26 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var mClient: BluetoothClient
 
-    var notifyService = UUID.fromString("0000fee1-0000-1000-8000-00805f9b34fb")
+    val notifyService = UUID.fromString("0000fee1-0000-1000-8000-00805f9b34fb")
 
-    var auth = UUID.fromString("00000009-0000-3512-2118-0009af100700")
+    val auth = UUID.fromString("00000009-0000-3512-2118-0009af100700")
+
+    /**
+     *
+    heartRate = serviceMap["0000180d-0000-1000-8000-00805f9b34fb"]!!
+    battery = serviceMap["0000180f-0000-1000-8000-00805f9b34fb"]!!
+     */
+    val heartRate = UUID.fromString("0000180d-0000-1000-8000-00805f9b34fb")
+
+    val heartRateMeasureCharacteristic = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb")
+
+    val heartRateControlCharacteristic = UUID.fromString("00002a39-0000-1000-8000-00805f9b34fb")
+
+
+    val battery = UUID.fromString("0000180f-0000-1000-8000-00805f9b34fb")
+
+    val batteryRead = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb")
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -86,15 +103,16 @@ class MainActivity : AppCompatActivity() {
             }
 
 
-//            mClient.read(
-//                MAC, notifyService, auth
-//            ) { code, data ->
-//                if (code == REQUEST_SUCCESS) {
-//                    Log.d("MainActivity", "read success data: ${ByteUtils.bytes2HexStr(data)}")
-//                } else {
-//                    Log.d("MainActivity", "read failed code: $code")
-//                }
-//            }
+
+            mClient.read(
+                MAC, battery, batteryRead
+            ) { code, data ->
+                if (code == REQUEST_SUCCESS) {
+                    Log.d("MainActivity", "read success data: ${data[0]}")
+                } else {
+                    Log.d("MainActivity", "read failed code: $code")
+                }
+            }
 
 
             mClient.notify(MAC, notifyService, auth, object : BleNotifyResponse {
@@ -121,6 +139,19 @@ class MainActivity : AppCompatActivity() {
                             }
                             "100301" -> {
                                 Log.d("MainActivity", "Mi Band Connect Success!")
+                                mClient.notify(MAC,heartRate, heartRateMeasureCharacteristic, object : BleNotifyResponse {
+                                    override fun onNotify(service: UUID?, character: UUID?, value: ByteArray?) {
+                                        Log.d("Main Activity", "heart rate notify : ${value?.get(1)}")
+                                    }
+
+                                    override fun onResponse(code: Int) {
+                                        if (code == REQUEST_SUCCESS) {
+                                            Log.d("MainActivity", "notify success")
+                                        } else {
+                                            Log.d("MainActivity", "notify failed code: $code")
+                                        }
+                                    }
+                                })
                             }
                             "100304" -> {
                                 Log.d(
@@ -147,6 +178,9 @@ class MainActivity : AppCompatActivity() {
             })
 
             mClient.registerConnectStatusListener(MAC, mBleConnectStatusListener)
+
+
+
 
 
         }
