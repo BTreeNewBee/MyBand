@@ -6,13 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
-import cn.com.heaton.blelibrary.ble.Ble
-import cn.com.heaton.blelibrary.ble.BleLog
-import cn.com.heaton.blelibrary.ble.model.BleFactory
-import cn.com.heaton.blelibrary.ble.utils.UuidUtils
-import java.util.*
 
 /**
  * A simple [Fragment] subclass as the default destination in the navigation.

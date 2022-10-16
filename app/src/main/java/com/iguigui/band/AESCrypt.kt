@@ -1,6 +1,5 @@
 package com.iguigui.band
 
-import cn.com.heaton.blelibrary.ble.utils.ByteUtils
 import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
