@@ -64,4 +64,5 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$rootProject.hiltVersion"
     implementation "androidx.profileinstaller:profileinstaller:$rootProject.profileInstallerVersion"
     implementation "androidx.tracing:tracing-ktx:$rootProject.tracingVersion"
+    implementation 'com.orhanobut:logger:2.2.0'
 }
