@@ -14,49 +14,73 @@ import androidx.appcompat.app.AppCompatActivity
 import com.iguigui.band.permission.PermissionsManager
 import com.iguigui.band.permission.PermissionsResultAction
 import com.orhanobut.logger.*
-import com.rabbitmq.client.AMQP
-import com.rabbitmq.client.ConnectionFactory
-import com.rabbitmq.client.DefaultConsumer
-import com.rabbitmq.client.Envelope
+import com.rabbitmq.client.*
 import java.io.*
 import java.net.UnknownHostException
 import java.text.SimpleDateFormat
 import java.util.*
+import kotlin.concurrent.thread
 
 class MainActivity : AppCompatActivity() {
 
     private val fellAsleepReceiver by lazy {
         Logger.d("fellAsleepReceiver init")
-        FellAsleepReceiver()
+        FellAsleepReceiver(this)
     }
-    private val wokeUpReceiver by lazy { WokeUpReceiver() }
-    private val startNonWearReceiver by lazy { StartNonWearReceiver() }
+    private val wokeUpReceiver by lazy { WokeUpReceiver(this) }
+    private val startNonWearReceiver by lazy { StartNonWearReceiver(this) }
     private val externalFilesDir by lazy { getExternalFilesDir(null) }
 
-    private val mConnectionFactory = ConnectionFactory() // 声明ConnectionFactory对象
+    private val mConnectionFactory by lazy {
+        ConnectionFactory().apply {
+            host = props.getProperty("host")?.toString()
+            port = props.getProperty("port")?.toString()?.toInt()!!
+            username = props.getProperty("username").toString()
+            password = props.getProperty("password")?.toString()
+            connectionTimeout = 5000
+        }
+    }
 
-    val props by lazy {
+    private val mConnection by lazy {
+        mConnectionFactory.newConnection()
+    }
+
+    val channel: Channel by lazy {
+        val createChannel = mConnection.createChannel()
+        createChannel.queueBind("clientInfo", "amq.direct", "clientInfo")
+        createChannel
+    }
+
+    private val props by lazy {
         val props = Properties()
-        props.load(assets.open("appconfig.properties"))
+        props.load(assets.open("config.properties"))
         props
+    }
+
+    val basicProperties by lazy {
+        AMQP.BasicProperties.Builder()
+            .contentType("text/plain")
+            .deliveryMode(2)
+            .priority(1)
+            .build()
     }
 
     private fun setUpConnectionFactory() {
         //建立连接
         mConnectionFactory.apply {
             host = props.getProperty("host")?.toString()
-            port =  props.getProperty("port")?.toString()?.toInt()!!
-            username =  props.getProperty("username").toString()
-            password =  props.getProperty("password")?.toString()
+            port = props.getProperty("port")?.toString()?.toInt()!!
+            username = props.getProperty("username").toString()
+            password = props.getProperty("password")?.toString()
             connectionTimeout = 5000
+            virtualHost = "dev"
         }
         val thread = Thread {
             Logger.d("thread start")
             // 创建连接
-            val connection = mConnectionFactory.newConnection()
-            val channel = connection.createChannel()
+            val channel = mConnection.createChannel()
             //将队列绑定到消息交换机 exchange 上
-            channel.queueBind("botInfo", "amq.direct", "serverInfo")
+            channel.queueBind("serverInfo", "amq.direct", "serverInfo")
             //创建消费者
             val consumer = object : DefaultConsumer(channel) {
                 override fun handleDelivery(
@@ -69,10 +93,9 @@ class MainActivity : AppCompatActivity() {
                     body?.let {
                         Logger.d("handleDelivery: ${String(it)}")
                     }
-                    channel.basicPublish("amq.direct", "clientInfo", null, "hello".toByteArray())
                 }
             }
-            channel.basicConsume("botInfo", true, consumer)
+            channel.basicConsume("serverInfo", true, consumer)
         }
         thread.start()
     }
@@ -83,13 +106,12 @@ class MainActivity : AppCompatActivity() {
         requestPermissions()
         initLogger()
         Logger.i("onCreate")
-
+        setUpConnectionFactory()
         setContentView(R.layout.activity_main)
         setSupportActionBar(findViewById(R.id.toolbar))
         findViewById<Button>(R.id.ConnectBand).setOnClickListener {
 
         }
-
         registerReceiver(
             fellAsleepReceiver,
             IntentFilter("nodomain.freeyourgadget.gadgetbridge.FellAsleep")
@@ -107,9 +129,9 @@ class MainActivity : AppCompatActivity() {
 
         registerReceiver(
             startNonWearReceiver,
-            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
+//            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
+            IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
         )
-
     }
 
     override fun onStop() {
@@ -176,32 +198,57 @@ class MainActivity : AppCompatActivity() {
 
 }
 
-class FellAsleepReceiver : BroadcastReceiver() {
+class FellAsleepReceiver(private val mainActivity: MainActivity) : BroadcastReceiver() {
+
 
     override fun onReceive(context: Context?, intent: Intent?) {
         Toast.makeText(context, "Intent Detected.", Toast.LENGTH_LONG).show()
         Logger.i("FellAsleepReceiver context $context intent $intent")
+        thread {
+            mainActivity.channel.basicPublish(
+                "amq.direct",
+                "clientInfo",
+                mainActivity.basicProperties,
+                "FellAsleepReceiver!".toByteArray()
+            )
+        }
     }
 }
 
-class WokeUpReceiver : BroadcastReceiver() {
+class WokeUpReceiver(private val mainActivity: MainActivity) : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         Toast.makeText(context, "Intent Detected.", Toast.LENGTH_LONG).show()
         Logger.i("WokeUpReceiver context $context intent $intent")
+        thread {
+            mainActivity.channel.basicPublish(
+                "amq.direct",
+                "clientInfo",
+                mainActivity.basicProperties,
+                "WokeUpReceiver!".toByteArray()
+            )
+        }
     }
 }
 
-class StartNonWearReceiver : BroadcastReceiver() {
+class StartNonWearReceiver(private val mainActivity: MainActivity) : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         Toast.makeText(context, "Intent Detected.", Toast.LENGTH_LONG).show()
         Logger.i("StartNonWearReceiver context $context intent $intent")
+        thread {
+            mainActivity.channel.basicPublish(
+                "amq.direct",
+                "clientInfo",
+                mainActivity.basicProperties,
+                "StartNonWearReceiver!".toByteArray()
+            )
+        }
     }
 }
 
 
-internal class MyDiskLogAdapter(path:String) : LogAdapter {
+internal class MyDiskLogAdapter(path: String) : LogAdapter {
     private val formatStrategy: MyFormatStrateg = MyFormatStrateg.Builder().build(path)
     override fun isLoggable(priority: Int, @Nullable tag: String?): Boolean {
         return true
