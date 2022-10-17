@@ -14,7 +14,10 @@ import androidx.appcompat.app.AppCompatActivity
 import com.iguigui.band.permission.PermissionsManager
 import com.iguigui.band.permission.PermissionsResultAction
 import com.orhanobut.logger.*
+import com.rabbitmq.client.AMQP
 import com.rabbitmq.client.ConnectionFactory
+import com.rabbitmq.client.DefaultConsumer
+import com.rabbitmq.client.Envelope
 import java.io.*
 import java.net.UnknownHostException
 import java.text.SimpleDateFormat
@@ -40,32 +43,38 @@ class MainActivity : AppCompatActivity() {
 
     private fun setUpConnectionFactory() {
         //建立连接
-//        mConnectionFactory.apply {
-//            host = props.getProperty("")?.text?.toString()
-//            port = edit_port?.text?.toString()?.toInt()!!
-//            username = edit_username?.text?.toString()
-//            password = edit_password?.text?.toString()
-//            connectionTimeout = 5000
-//        }
-//        thread = Thread {
-//            LogUtils.d(TAG, "start connecting ...")
-//            // 创建连接
-//            val connection = mConnectionFactory.newConnection()
-//            val channel = connection.createChannel()
-//            //将队列绑定到消息交换机 exchange 上
-//            val queueDeclare = channel.queueDeclare()
-//            channel.queueBind(queueDeclare.queue, "log.fanout", "fanout.sms")
-//            //创建消费者
-//            val consumer = QueueingConsumer(channel)
-//            channel.basicConsume(queueDeclare.queue, true, consumer)
-//            LogUtils.d(TAG, "start reading ...")
-//            while (true) {
-//                val delivery = consumer.nextDelivery()
-//                val message = String(delivery.body)
-//                LogUtils.d(TAG, message)
-//            }
-//        }
-//        thread?.start()
+        mConnectionFactory.apply {
+            host = props.getProperty("host")?.toString()
+            port =  props.getProperty("port")?.toString()?.toInt()!!
+            username =  props.getProperty("username").toString()
+            password =  props.getProperty("password")?.toString()
+            connectionTimeout = 5000
+        }
+        val thread = Thread {
+            Logger.d("thread start")
+            // 创建连接
+            val connection = mConnectionFactory.newConnection()
+            val channel = connection.createChannel()
+            //将队列绑定到消息交换机 exchange 上
+            channel.queueBind("botInfo", "amq.direct", "serverInfo")
+            //创建消费者
+            val consumer = object : DefaultConsumer(channel) {
+                override fun handleDelivery(
+                    consumerTag: String?,
+                    envelope: Envelope?,
+                    properties: AMQP.BasicProperties?,
+                    body: ByteArray?
+                ) {
+                    super.handleDelivery(consumerTag, envelope, properties, body)
+                    body?.let {
+                        Logger.d("handleDelivery: ${String(it)}")
+                    }
+                    channel.basicPublish("amq.direct", "clientInfo", null, "hello".toByteArray())
+                }
+            }
+            channel.basicConsume("botInfo", true, consumer)
+        }
+        thread.start()
     }
 
 
