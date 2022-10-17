@@ -6,26 +6,67 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.*
+import android.util.Log.*
 import android.widget.Button
 import android.widget.Toast
 import androidx.annotation.Nullable
 import androidx.appcompat.app.AppCompatActivity
+import com.iguigui.band.permission.PermissionsManager
+import com.iguigui.band.permission.PermissionsResultAction
 import com.orhanobut.logger.*
+import com.rabbitmq.client.ConnectionFactory
+import java.io.*
+import java.net.UnknownHostException
 import java.text.SimpleDateFormat
 import java.util.*
 
-import android.util.Log.*
-import com.iguigui.band.permission.PermissionsManager
-import com.iguigui.band.permission.PermissionsResultAction
-import java.io.*
-import java.net.UnknownHostException
-
 class MainActivity : AppCompatActivity() {
 
-    private val fellAsleepReceiver by lazy { FellAsleepReceiver() }
+    private val fellAsleepReceiver by lazy {
+        Logger.d("fellAsleepReceiver init")
+        FellAsleepReceiver()
+    }
     private val wokeUpReceiver by lazy { WokeUpReceiver() }
     private val startNonWearReceiver by lazy { StartNonWearReceiver() }
     private val externalFilesDir by lazy { getExternalFilesDir(null) }
+
+    private val mConnectionFactory = ConnectionFactory() // 声明ConnectionFactory对象
+
+    val props by lazy {
+        val props = Properties()
+        props.load(assets.open("appconfig.properties"))
+        props
+    }
+
+    private fun setUpConnectionFactory() {
+        //建立连接
+//        mConnectionFactory.apply {
+//            host = props.getProperty("")?.text?.toString()
+//            port = edit_port?.text?.toString()?.toInt()!!
+//            username = edit_username?.text?.toString()
+//            password = edit_password?.text?.toString()
+//            connectionTimeout = 5000
+//        }
+//        thread = Thread {
+//            LogUtils.d(TAG, "start connecting ...")
+//            // 创建连接
+//            val connection = mConnectionFactory.newConnection()
+//            val channel = connection.createChannel()
+//            //将队列绑定到消息交换机 exchange 上
+//            val queueDeclare = channel.queueDeclare()
+//            channel.queueBind(queueDeclare.queue, "log.fanout", "fanout.sms")
+//            //创建消费者
+//            val consumer = QueueingConsumer(channel)
+//            channel.basicConsume(queueDeclare.queue, true, consumer)
+//            LogUtils.d(TAG, "start reading ...")
+//            while (true) {
+//                val delivery = consumer.nextDelivery()
+//                val message = String(delivery.body)
+//                LogUtils.d(TAG, message)
+//            }
+//        }
+//        thread?.start()
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,14 +80,17 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.ConnectBand).setOnClickListener {
 
         }
+
         registerReceiver(
             fellAsleepReceiver,
             IntentFilter("nodomain.freeyourgadget.gadgetbridge.FellAsleep")
         )
+
         registerReceiver(
             wokeUpReceiver,
             IntentFilter("nodomain.freeyourgadget.gadgetbridge.WokeUp")
         )
+
         registerReceiver(
             startNonWearReceiver,
             IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
@@ -54,8 +98,7 @@ class MainActivity : AppCompatActivity() {
 
         registerReceiver(
             startNonWearReceiver,
-//            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
-            IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
+            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
         )
 
     }

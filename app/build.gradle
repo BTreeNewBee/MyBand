@@ -65,4 +65,5 @@ dependencies {
     implementation "androidx.profileinstaller:profileinstaller:$rootProject.profileInstallerVersion"
     implementation "androidx.tracing:tracing-ktx:$rootProject.tracingVersion"
     implementation 'com.orhanobut:logger:2.2.0'
+    implementation 'com.rabbitmq:amqp-client:5.10.0'
 }
