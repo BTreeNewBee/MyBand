@@ -130,8 +130,14 @@ class MainActivity : AppCompatActivity() {
         registerReceiver(
             startNonWearReceiver,
 //            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
-            IntentFilter("android.net.conn.CONNECTIVITY_CHANGE")
+            IntentFilter("android.intent.action.SCREEN_ON")
         )
+        registerReceiver(
+            startNonWearReceiver,
+//            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
+            IntentFilter("android.intent.action.SCREEN_OFF")
+        )
+
     }
 
     override fun onStop() {
@@ -241,7 +247,7 @@ class StartNonWearReceiver(private val mainActivity: MainActivity) : BroadcastRe
                 "amq.direct",
                 "clientInfo",
                 mainActivity.basicProperties,
-                "StartNonWearReceiver!".toByteArray()
+                "StartNonWearReceiver =  ${intent?.action}".toByteArray()
             )
         }
     }
