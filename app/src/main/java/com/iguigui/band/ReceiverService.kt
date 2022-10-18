@@ -14,10 +14,7 @@ import kotlin.concurrent.thread
 
 class ReceiverService : Service() {
 
-    private val fellAsleepReceiver by lazy {
-        Logger.d("fellAsleepReceiver init")
-        FellAsleepReceiver()
-    }
+    private val fellAsleepReceiver by lazy { FellAsleepReceiver() }
     private val wokeUpReceiver by lazy { WokeUpReceiver() }
     private val startNonWearReceiver by lazy { StartNonWearReceiver() }
 
@@ -30,26 +27,33 @@ class ReceiverService : Service() {
         Logger.d("ReceiverService onCreate")
         super.onCreate()
         connectionRMQ()
+
+        //爷醒了
         registerReceiver(
             fellAsleepReceiver,
             IntentFilter("nodomain.freeyourgadget.gadgetbridge.FellAsleep")
         )
 
+        //爷睡了
         registerReceiver(
             wokeUpReceiver,
             IntentFilter("nodomain.freeyourgadget.gadgetbridge.WokeUp")
         )
 
+        //爷不带手环了
         registerReceiver(
             startNonWearReceiver,
             IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
         )
 
+        //爷玩手机了
         registerReceiver(
             startNonWearReceiver,
 //            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
             IntentFilter("android.intent.action.SCREEN_ON")
         )
+
+        //爷不玩了
         registerReceiver(
             startNonWearReceiver,
 //            IntentFilter("nodomain.freeyourgadget.gadgetbridge.StartNonWear")
@@ -87,7 +91,7 @@ class FellAsleepReceiver : BroadcastReceiver() {
                 "amq.direct",
                 "clientInfo",
                 basicProperties,
-                "FellAsleepReceiver!".toByteArray()
+                "FellAsleep".toByteArray()
             )
         }
     }
@@ -103,7 +107,7 @@ class WokeUpReceiver : BroadcastReceiver() {
                 "amq.direct",
                 "clientInfo",
                 basicProperties,
-                "WokeUpReceiver!".toByteArray()
+                "WokeUp".toByteArray()
             )
         }
     }
