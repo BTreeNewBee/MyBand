@@ -8,6 +8,7 @@ import android.content.IntentFilter
 import android.widget.Toast
 import com.orhanobut.logger.Logger
 import com.rabbitmq.client.*
+import kotlinx.coroutines.coroutineScope
 import java.util.*
 import kotlin.concurrent.thread
 
@@ -108,7 +109,7 @@ class WokeUpReceiver : BroadcastReceiver() {
     }
 }
 
-class StartNonWearReceiver() : BroadcastReceiver() {
+class StartNonWearReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
         Toast.makeText(context, "Intent Detected.", Toast.LENGTH_LONG).show()
